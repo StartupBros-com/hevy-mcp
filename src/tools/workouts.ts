@@ -148,7 +148,6 @@ export function registerWorkoutTools(
 		description: z.string().optional().nullable(),
 		startTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
 		endTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
-		routineId: z.string().optional().nullable(),
 		isPrivate: z.boolean().default(false),
 		exercises: z.array(
 			z.object({
@@ -193,7 +192,6 @@ export function registerWorkoutTools(
 				description: description || null,
 				start_time: startTime,
 				end_time: endTime,
-				routine_id: args.routineId ?? null,
 				is_private: isPrivate,
 				exercises: exercises.map(
 					(exercise): PostWorkoutsRequestExercise => ({
@@ -237,7 +235,6 @@ export function registerWorkoutTools(
 		description: z.string().optional().nullable(),
 		startTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
 		endTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
-		routineId: z.string().optional().nullable(),
 		isPrivate: z.boolean().default(false),
 		exercises: z.array(
 			z.object({
@@ -281,7 +278,6 @@ export function registerWorkoutTools(
 				description,
 				startTime,
 				endTime,
-				routineId,
 				isPrivate,
 				exercises,
 			} = args;
@@ -290,7 +286,6 @@ export function registerWorkoutTools(
 				description: description || null,
 				start_time: startTime,
 				end_time: endTime,
-				routine_id: routineId ?? null,
 				is_private: isPrivate,
 				exercises: exercises.map(
 					(exercise): PostWorkoutsRequestExercise => ({
