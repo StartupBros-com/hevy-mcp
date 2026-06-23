@@ -142,3 +142,6 @@ dist
 
 # Smithery CLI build artifacts
 .smithery/index.cjs
+
+# Claude Code parallel worktrees
+.claude/worktrees/
