@@ -8,6 +8,7 @@ import type {
 } from "../generated/client/types/index.js";
 import { withErrorHandling } from "../utils/error-handler.js";
 import { formatWorkout } from "../utils/formatters.js";
+import { requireHevyClient } from "../utils/hevyClient.js";
 import type { HevyClient } from "../utils/hevyClient.js";
 import {
 	createEmptyResponse,
@@ -34,13 +35,9 @@ export function registerWorkoutTools(
 		"Get a paginated list of workouts. Returns workout details including title, description, start/end times, and exercises performed. Results are ordered from newest to oldest.",
 		getWorkoutsSchema,
 		withErrorHandling(async (args: GetWorkoutsParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { page, pageSize } = args;
-			const data = await hevyClient.getWorkouts({
+			const data = await client.getWorkouts({
 				page,
 				pageSize,
 			});
@@ -69,13 +66,9 @@ export function registerWorkoutTools(
 		"Get complete details of a specific workout by ID. Returns all workout information including title, description, start/end times, and detailed exercise data.",
 		getWorkoutSchema,
 		withErrorHandling(async (args: GetWorkoutParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { workoutId } = args;
-			const data = await hevyClient.getWorkout(workoutId);
+			const data = await client.getWorkout(workoutId);
 
 			if (!data) {
 				return createEmptyResponse(`Workout with ID ${workoutId} not found`);
@@ -92,12 +85,8 @@ export function registerWorkoutTools(
 		"Get the total number of workouts on the account. Useful for pagination or statistics.",
 		{},
 		withErrorHandling(async () => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
-			const data = await hevyClient.getWorkoutCount();
+			const client = requireHevyClient(hevyClient);
+			const data = await client.getWorkoutCount();
 			const count = data
 				? (data as { workoutCount?: number }).workoutCount || 0
 				: 0;
@@ -118,13 +107,9 @@ export function registerWorkoutTools(
 		"Retrieve a paged list of workout events (updates or deletes) since a given date. Events are ordered from newest to oldest. The intention is to allow clients to keep their local cache of workouts up to date without having to fetch the entire list of workouts.",
 		getWorkoutEventsSchema,
 		withErrorHandling(async (args: GetWorkoutEventsParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { page, pageSize, since } = args;
-			const data = await hevyClient.getWorkoutEvents({
+			const data = await client.getWorkoutEvents({
 				page,
 				pageSize,
 				since,
@@ -180,11 +165,7 @@ export function registerWorkoutTools(
 		"Create a new workout in your Hevy account. Requires title, start/end times, and at least one exercise with sets. Returns the complete workout details upon successful creation including the newly assigned workout ID.",
 		createWorkoutSchema,
 		withErrorHandling(async (args: CreateWorkoutParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { title, description, startTime, endTime, isPrivate, exercises } =
 				args;
 			const workoutPayload = {
@@ -212,7 +193,7 @@ export function registerWorkoutTools(
 			};
 			const requestBody: PostWorkoutsRequestBody = { workout: workoutPayload };
 
-			const data = await hevyClient.createWorkout(requestBody);
+			const data = await client.createWorkout(requestBody);
 
 			if (!data) {
 				return createEmptyResponse(
@@ -267,11 +248,7 @@ export function registerWorkoutTools(
 		"Update an existing workout by ID. You can modify the title, description, start/end times, privacy setting, and exercise data. Returns the updated workout with all changes applied.",
 		updateWorkoutSchema,
 		withErrorHandling(async (args: UpdateWorkoutParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const {
 				workoutId,
 				title,
@@ -306,7 +283,7 @@ export function registerWorkoutTools(
 			};
 			const requestBody: PostWorkoutsRequestBody = { workout: workoutPayload };
 
-			const data = await hevyClient.updateWorkout(workoutId, requestBody);
+			const data = await client.updateWorkout(workoutId, requestBody);
 
 			if (!data) {
 				return createEmptyResponse(
