@@ -4,27 +4,13 @@ import { z } from "zod";
 import type { RoutineFolder } from "../generated/client/types/index.js";
 import { withErrorHandling } from "../utils/error-handler.js";
 import { formatRoutineFolder } from "../utils/formatters.js";
+import { requireHevyClient } from "../utils/hevyClient.js";
+import type { HevyClient } from "../utils/hevyClient.js";
 import {
 	createEmptyResponse,
 	createJsonResponse,
 } from "../utils/response-formatter.js";
 import type { InferToolParams } from "../utils/tool-helpers.js";
-
-// Type definitions for the folder operations
-type HevyClient = ReturnType<
-	typeof import("../utils/hevyClientKubb.js").createClient
->;
-
-const API_CLIENT_NOT_INITIALIZED =
-	"API client not initialized. Please provide HEVY_API_KEY.";
-
-function requireHevyClient(client: HevyClient | null): HevyClient {
-	if (!client) {
-		throw new Error(API_CLIENT_NOT_INITIALIZED);
-	}
-
-	return client;
-}
 
 /**
  * Register all routine folder-related tools with the MCP server
