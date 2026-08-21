@@ -7,16 +7,13 @@ import {
 	formatExerciseHistoryEntry,
 	formatExerciseTemplate,
 } from "../utils/formatters.js";
+import { requireHevyClient } from "../utils/hevyClient.js";
+import type { HevyClient } from "../utils/hevyClient.js";
 import {
 	createEmptyResponse,
 	createJsonResponse,
 } from "../utils/response-formatter.js";
 import type { InferToolParams } from "../utils/tool-helpers.js";
-
-// Type definitions for the template operations
-type HevyClient = ReturnType<
-	typeof import("../utils/hevyClientKubb.js").createClient
->;
 
 /**
  * Register all exercise template-related tools with the MCP server
@@ -39,13 +36,9 @@ export function registerTemplateTools(
 		"Get a paginated list of exercise templates (default and custom) with details like name, category, equipment, and muscle groups. Useful for browsing or searching available exercises.",
 		getExerciseTemplatesSchema,
 		withErrorHandling(async (args: GetExerciseTemplatesParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { page, pageSize } = args;
-			const data = await hevyClient.getExerciseTemplates({
+			const data = await client.getExerciseTemplates({
 				page,
 				pageSize,
 			});
@@ -79,13 +72,9 @@ export function registerTemplateTools(
 		"Get complete details of a specific exercise template by its ID, including name, category, equipment, muscle groups, and notes.",
 		getExerciseTemplateSchema,
 		withErrorHandling(async (args: GetExerciseTemplateParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { exerciseTemplateId } = args;
-			const data = await hevyClient.getExerciseTemplate(exerciseTemplateId);
+			const data = await client.getExerciseTemplate(exerciseTemplateId);
 
 			if (!data) {
 				return createEmptyResponse(
@@ -121,13 +110,9 @@ export function registerTemplateTools(
 		"Get past sets for a specific exercise template, optionally filtered by start and end dates.",
 		getExerciseHistorySchema,
 		withErrorHandling(async (args: GetExerciseHistoryParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { exerciseTemplateId, startDate, endDate } = args;
-			const data = await hevyClient.getExerciseHistory(exerciseTemplateId, {
+			const data = await client.getExerciseHistory(exerciseTemplateId, {
 				...(startDate ? { start_date: startDate } : {}),
 				...(endDate ? { end_date: endDate } : {}),
 			});
@@ -229,11 +214,7 @@ export function registerTemplateTools(
 		"Create a custom exercise template with title, type, equipment, and muscle groups.",
 		createExerciseTemplateSchema,
 		withErrorHandling(async (args: CreateExerciseTemplateParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const {
 				title,
 				exerciseType,
@@ -242,7 +223,7 @@ export function registerTemplateTools(
 				otherMuscles,
 			} = args;
 
-			const response = await hevyClient.createExerciseTemplate({
+			const response = await client.createExerciseTemplate({
 				exercise: {
 					title,
 					exercise_type: exerciseType,

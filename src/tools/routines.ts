@@ -12,16 +12,13 @@ import type {
 } from "../generated/client/types/index.js";
 import { withErrorHandling } from "../utils/error-handler.js";
 import { formatRoutine } from "../utils/formatters.js";
+import { requireHevyClient } from "../utils/hevyClient.js";
+import type { HevyClient } from "../utils/hevyClient.js";
 import {
 	createEmptyResponse,
 	createJsonResponse,
 } from "../utils/response-formatter.js";
 import type { InferToolParams } from "../utils/tool-helpers.js";
-
-// Type definitions for the routine operations
-type HevyClient = ReturnType<
-	typeof import("../utils/hevyClientKubb.js").createClient
->;
 
 /**
  * Register all routine-related tools with the MCP server
@@ -42,13 +39,9 @@ export function registerRoutineTools(
 		"Get a paginated list of your workout routines, including custom and default routines. Useful for browsing or searching your available routines.",
 		getRoutinesSchema,
 		withErrorHandling(async (args: GetRoutinesParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { page, pageSize } = args;
-			const data = await hevyClient.getRoutines({
+			const data = await client.getRoutines({
 				page,
 				pageSize,
 			});
@@ -78,13 +71,9 @@ export function registerRoutineTools(
 		"Get a routine by its ID using the direct endpoint. Returns all details for the specified routine.",
 		getRoutineSchema,
 		withErrorHandling(async (args: GetRoutineParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { routineId } = args;
-			const data = await hevyClient.getRoutineById(String(routineId));
+			const data = await client.getRoutineById(String(routineId));
 			if (!data || !data.routine) {
 				return createEmptyResponse(`Routine with ID ${routineId} not found`);
 			}
@@ -135,13 +124,9 @@ export function registerRoutineTools(
 		"Create a new workout routine in your Hevy account. Requires a title and at least one exercise with sets. Optionally assign to a folder. Returns the full routine details including the new routine ID.",
 		createRoutineSchema,
 		withErrorHandling(async (args: CreateRoutineParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { title, folderId, notes, exercises } = args;
-			const data = await hevyClient.createRoutine({
+			const data = await client.createRoutine({
 				routine: {
 					title,
 					folder_id: folderId ?? null,
@@ -229,13 +214,9 @@ export function registerRoutineTools(
 		"Update an existing routine by ID. You can modify the title, notes, and exercise configurations. Returns the updated routine with all changes applied.",
 		updateRoutineSchema,
 		withErrorHandling(async (args: UpdateRoutineParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { routineId, title, notes, exercises } = args;
-			const data = await hevyClient.updateRoutine(routineId, {
+			const data = await client.updateRoutine(routineId, {
 				routine: {
 					title,
 					notes: notes ?? null,

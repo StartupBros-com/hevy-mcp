@@ -4,16 +4,13 @@ import { z } from "zod";
 import type { RoutineFolder } from "../generated/client/types/index.js";
 import { withErrorHandling } from "../utils/error-handler.js";
 import { formatRoutineFolder } from "../utils/formatters.js";
+import { requireHevyClient } from "../utils/hevyClient.js";
+import type { HevyClient } from "../utils/hevyClient.js";
 import {
 	createEmptyResponse,
 	createJsonResponse,
 } from "../utils/response-formatter.js";
 import type { InferToolParams } from "../utils/tool-helpers.js";
-
-// Type definitions for the folder operations
-type HevyClient = ReturnType<
-	typeof import("../utils/hevyClientKubb.js").createClient
->;
 
 /**
  * Register all routine folder-related tools with the MCP server
@@ -36,13 +33,9 @@ export function registerFolderTools(
 		"Get a paginated list of your routine folders, including both default and custom folders. Useful for organizing and browsing your workout routines.",
 		getRoutineFoldersSchema,
 		withErrorHandling(async (args: GetRoutineFoldersParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { page, pageSize } = args;
-			const data = await hevyClient.getRoutineFolders({
+			const data = await client.getRoutineFolders({
 				page,
 				pageSize,
 			});
@@ -74,13 +67,9 @@ export function registerFolderTools(
 		"Get complete details of a specific routine folder by its ID, including name, creation date, and associated routines.",
 		getRoutineFolderSchema,
 		withErrorHandling(async (args: GetRoutineFolderParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { folderId } = args;
-			const data = await hevyClient.getRoutineFolder(folderId);
+			const data = await client.getRoutineFolder(folderId);
 
 			if (!data) {
 				return createEmptyResponse(
@@ -106,13 +95,9 @@ export function registerFolderTools(
 		"Create a new routine folder in your Hevy account. Requires a name for the folder. Returns the full folder details including the new folder ID.",
 		createRoutineFolderSchema,
 		withErrorHandling(async (args: CreateRoutineFolderParams) => {
-			if (!hevyClient) {
-				throw new Error(
-					"API client not initialized. Please provide HEVY_API_KEY.",
-				);
-			}
+			const client = requireHevyClient(hevyClient);
 			const { name } = args;
-			const data = await hevyClient.createRoutineFolder({
+			const data = await client.createRoutineFolder({
 				routine_folder: {
 					title: name,
 				},
