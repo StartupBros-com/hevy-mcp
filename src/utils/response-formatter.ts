@@ -70,12 +70,5 @@ export function createTextResponse(message: string): McpToolResponse {
 export function createEmptyResponse(
 	message = "No data found",
 ): McpToolResponse {
-	return {
-		content: [
-			{
-				type: "text" as const,
-				text: message,
-			},
-		],
-	};
+	return createTextResponse(message);
 }
