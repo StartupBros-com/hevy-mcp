@@ -8,13 +8,73 @@ import type {
 } from "../generated/client/types/index.js";
 import { withErrorHandling } from "../utils/error-handler.js";
 import { formatWorkout } from "../utils/formatters.js";
-import { requireHevyClient } from "../utils/hevyClient.js";
 import type { HevyClient } from "../utils/hevyClient.js";
+import { requireHevyClient } from "../utils/hevyClient.js";
 import {
 	createEmptyResponse,
 	createJsonResponse,
 } from "../utils/response-formatter.js";
 import type { InferToolParams } from "../utils/tool-helpers.js";
+
+const workoutFields = {
+	title: z.string().min(1),
+	description: z.string().optional().nullable(),
+	startTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
+	endTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
+	isPrivate: z.boolean().default(false),
+	exercises: z.array(
+		z.object({
+			exerciseTemplateId: z.string().min(1),
+			supersetId: z.coerce.number().nullable().optional(),
+			notes: z.string().optional().nullable(),
+			sets: z.array(
+				z.object({
+					type: z
+						.enum(["warmup", "normal", "failure", "dropset"])
+						.default("normal"),
+					weight: z.coerce.number().optional().nullable(),
+					weightKg: z.coerce.number().optional().nullable(),
+					reps: z.coerce.number().int().optional().nullable(),
+					distance: z.coerce.number().int().optional().nullable(),
+					distanceMeters: z.coerce.number().int().optional().nullable(),
+					duration: z.coerce.number().int().optional().nullable(),
+					durationSeconds: z.coerce.number().int().optional().nullable(),
+					rpe: z.coerce.number().optional().nullable(),
+					customMetric: z.coerce.number().optional().nullable(),
+				}),
+			),
+		}),
+	),
+} as const;
+type WorkoutParams = InferToolParams<typeof workoutFields>;
+
+function buildWorkoutRequest(args: WorkoutParams): PostWorkoutsRequestBody {
+	const { title, description, startTime, endTime, isPrivate, exercises } = args;
+	const workoutPayload = {
+		title,
+		description: description || null,
+		start_time: startTime,
+		end_time: endTime,
+		is_private: isPrivate,
+		exercises: exercises.map(
+			(exercise): PostWorkoutsRequestExercise => ({
+				exercise_template_id: exercise.exerciseTemplateId,
+				superset_id: exercise.supersetId ?? null,
+				notes: exercise.notes ?? null,
+				sets: exercise.sets.map((set) => ({
+					type: set.type as PostWorkoutsRequestSetTypeEnumKey,
+					weight_kg: set.weight ?? set.weightKg ?? null,
+					reps: set.reps ?? null,
+					distance_meters: set.distance ?? set.distanceMeters ?? null,
+					duration_seconds: set.duration ?? set.durationSeconds ?? null,
+					rpe: (set.rpe as PostWorkoutsRequestSetRpeEnumKey | null) ?? null,
+					custom_metric: set.customMetric ?? null,
+				})),
+			}),
+		),
+	};
+	return { workout: workoutPayload };
+}
 
 /**
  * Register all workout-related tools with the MCP server
@@ -128,36 +188,7 @@ export function registerWorkoutTools(
 	);
 
 	// Create workout
-	const createWorkoutSchema = {
-		title: z.string().min(1),
-		description: z.string().optional().nullable(),
-		startTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
-		endTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
-		isPrivate: z.boolean().default(false),
-		exercises: z.array(
-			z.object({
-				exerciseTemplateId: z.string().min(1),
-				supersetId: z.coerce.number().nullable().optional(),
-				notes: z.string().optional().nullable(),
-				sets: z.array(
-					z.object({
-						type: z
-							.enum(["warmup", "normal", "failure", "dropset"])
-							.default("normal"),
-						weight: z.coerce.number().optional().nullable(),
-						weightKg: z.coerce.number().optional().nullable(),
-						reps: z.coerce.number().int().optional().nullable(),
-						distance: z.coerce.number().int().optional().nullable(),
-						distanceMeters: z.coerce.number().int().optional().nullable(),
-						duration: z.coerce.number().int().optional().nullable(),
-						durationSeconds: z.coerce.number().int().optional().nullable(),
-						rpe: z.coerce.number().optional().nullable(),
-						customMetric: z.coerce.number().optional().nullable(),
-					}),
-				),
-			}),
-		),
-	} as const;
+	const createWorkoutSchema = workoutFields;
 	type CreateWorkoutParams = InferToolParams<typeof createWorkoutSchema>;
 
 	server.tool(
@@ -166,32 +197,7 @@ export function registerWorkoutTools(
 		createWorkoutSchema,
 		withErrorHandling(async (args: CreateWorkoutParams) => {
 			const client = requireHevyClient(hevyClient);
-			const { title, description, startTime, endTime, isPrivate, exercises } =
-				args;
-			const workoutPayload = {
-				title,
-				description: description || null,
-				start_time: startTime,
-				end_time: endTime,
-				is_private: isPrivate,
-				exercises: exercises.map(
-					(exercise): PostWorkoutsRequestExercise => ({
-						exercise_template_id: exercise.exerciseTemplateId,
-						superset_id: exercise.supersetId ?? null,
-						notes: exercise.notes ?? null,
-						sets: exercise.sets.map((set) => ({
-							type: set.type as PostWorkoutsRequestSetTypeEnumKey,
-							weight_kg: set.weight ?? set.weightKg ?? null,
-							reps: set.reps ?? null,
-							distance_meters: set.distance ?? set.distanceMeters ?? null,
-							duration_seconds: set.duration ?? set.durationSeconds ?? null,
-							rpe: (set.rpe as PostWorkoutsRequestSetRpeEnumKey | null) ?? null,
-							custom_metric: set.customMetric ?? null,
-						})),
-					}),
-				),
-			};
-			const requestBody: PostWorkoutsRequestBody = { workout: workoutPayload };
+			const requestBody = buildWorkoutRequest(args);
 
 			const data = await client.createWorkout(requestBody);
 
@@ -212,34 +218,7 @@ export function registerWorkoutTools(
 	// Update workout
 	const updateWorkoutSchema = {
 		workoutId: z.string().min(1),
-		title: z.string().min(1),
-		description: z.string().optional().nullable(),
-		startTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
-		endTime: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
-		isPrivate: z.boolean().default(false),
-		exercises: z.array(
-			z.object({
-				exerciseTemplateId: z.string().min(1),
-				supersetId: z.coerce.number().nullable().optional(),
-				notes: z.string().optional().nullable(),
-				sets: z.array(
-					z.object({
-						type: z
-							.enum(["warmup", "normal", "failure", "dropset"])
-							.default("normal"),
-						weight: z.coerce.number().optional().nullable(),
-						weightKg: z.coerce.number().optional().nullable(),
-						reps: z.coerce.number().int().optional().nullable(),
-						distance: z.coerce.number().int().optional().nullable(),
-						distanceMeters: z.coerce.number().int().optional().nullable(),
-						duration: z.coerce.number().int().optional().nullable(),
-						durationSeconds: z.coerce.number().int().optional().nullable(),
-						rpe: z.coerce.number().optional().nullable(),
-						customMetric: z.coerce.number().optional().nullable(),
-					}),
-				),
-			}),
-		),
+		...workoutFields,
 	} as const;
 	type UpdateWorkoutParams = InferToolParams<typeof updateWorkoutSchema>;
 
@@ -249,39 +228,8 @@ export function registerWorkoutTools(
 		updateWorkoutSchema,
 		withErrorHandling(async (args: UpdateWorkoutParams) => {
 			const client = requireHevyClient(hevyClient);
-			const {
-				workoutId,
-				title,
-				description,
-				startTime,
-				endTime,
-				isPrivate,
-				exercises,
-			} = args;
-			const workoutPayload = {
-				title,
-				description: description || null,
-				start_time: startTime,
-				end_time: endTime,
-				is_private: isPrivate,
-				exercises: exercises.map(
-					(exercise): PostWorkoutsRequestExercise => ({
-						exercise_template_id: exercise.exerciseTemplateId,
-						superset_id: exercise.supersetId ?? null,
-						notes: exercise.notes ?? null,
-						sets: exercise.sets.map((set) => ({
-							type: set.type as PostWorkoutsRequestSetTypeEnumKey,
-							weight_kg: set.weight ?? set.weightKg ?? null,
-							reps: set.reps ?? null,
-							distance_meters: set.distance ?? set.distanceMeters ?? null,
-							duration_seconds: set.duration ?? set.durationSeconds ?? null,
-							rpe: (set.rpe as PostWorkoutsRequestSetRpeEnumKey | null) ?? null,
-							custom_metric: set.customMetric ?? null,
-						})),
-					}),
-				),
-			};
-			const requestBody: PostWorkoutsRequestBody = { workout: workoutPayload };
+			const { workoutId } = args;
+			const requestBody = buildWorkoutRequest(args);
 
 			const data = await client.updateWorkout(workoutId, requestBody);
 
